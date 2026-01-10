@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>E-RPH Smart Sync | Ustaz Fathan</title>
+    <title>E-RPH Real-Time | Ustaz Fathan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -108,8 +108,8 @@
         
         <div class="flex flex-wrap gap-2 w-full md:w-auto">
             <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span class="text-[10px] font-bold text-emerald-500 uppercase">SMART SYNC</span>
+                <div id="live-indicator" class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span class="text-[10px] font-bold text-emerald-500 uppercase">LIVE SYNC (10s)</span>
             </div>
             
             <button onclick="manualSync()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-white font-bold text-xs shadow-lg transition flex items-center gap-2 border border-purple-400">
@@ -207,7 +207,8 @@
             if (u === USER_ID && p === USER_PASS) {
                 sessionStorage.setItem('isLoggedIn', 'true');
                 document.getElementById('login-gate').style.display = 'none';
-                silentCloudSync(); 
+                silentCloudSync('first'); 
+                startAutoSync(); // Mula timer
             } else {
                 document.getElementById('login-msg').classList.remove('hidden');
                 document.getElementById('password').value = '';
@@ -221,7 +222,17 @@
         let db_pelajar = JSON.parse(localStorage.getItem('pdp_db')) || defaultDb;
         let pdp_history = JSON.parse(localStorage.getItem('pdp_history')) || [];
         let holidays = JSON.parse(localStorage.getItem('pdp_holidays')) || [];
-        let isSaving = false;
+        let isEditing = false; // Flag penting supaya tak kacau user menaip
+
+        // --- REAL-TIME TIMER ---
+        function startAutoSync() {
+            // Check setiap 10 saat (10000ms)
+            setInterval(() => {
+                if (!isEditing) {
+                    silentCloudSync('auto');
+                }
+            }, 10000);
+        }
 
         // --- TOAST SYSTEM ---
         function showToast(status, msg) {
@@ -242,13 +253,12 @@
             } else if (status === 'error') {
                 toast.style.background = "#dc2626";
                 icon.style.display = "none";
-                text.innerHTML = '<i class="fas fa-wifi"></i> Error';
+                text.innerHTML = '<i class="fas fa-wifi"></i> Ralat';
                 setTimeout(() => { toast.classList.remove('show'); }, 3000);
             }
         }
 
-        // --- SMART SYNC ENGINE (CORE FIX) ---
-        // Ini fungsi paling penting: GABUNGKAN data cloud + data baru
+        // --- SMART SYNC & AUTO FETCH ---
         async function smartMergeSave(newRecord, isDelete = false) {
             showToast('loading', 'Gabung Data Cloud...');
             
@@ -265,24 +275,24 @@
                     latestDb = cloudData.db || db_pelajar;
                 }
 
-                // 2. Buang rekod lama untuk kelas ini (jika ada) dalam Cloud Data
+                // 2. Buang rekod lama utk kelas ini (clean up)
                 if (newRecord) {
                     latestHistory = latestHistory.filter(h => 
                         !(h.minggu == newRecord.minggu && h.hari == newRecord.hari && h.kelas == newRecord.kelas && h.masa == newRecord.masa)
                     );
                 }
 
-                // 3. Masukkan rekod baru (kecuali kalau kita nak delete)
+                // 3. Masukkan rekod baru (kecuali mode delete)
                 if (!isDelete && newRecord) {
                     latestHistory.push(newRecord);
                 }
 
-                // 4. Update Local Variable juga supaya sync
+                // 4. Update Local
                 pdp_history = latestHistory;
-                db_pelajar = latestDb; // Pakai DB paling update dari cloud juga
+                db_pelajar = latestDb;
                 saveAllData();
 
-                // 5. Hantar Balik ke Cloud
+                // 5. Push Balik
                 const packet = { 
                     db: latestDb, 
                     history: latestHistory, 
@@ -293,15 +303,14 @@
 
                 await fetch(API_URL, { method: 'POST', body: JSON.stringify(packet) });
                 
-                updateProgress(); // Update UI
-                showToast('success', 'Data Digabungkan!');
+                updateProgress(); 
+                showToast('success', 'Disimpan & Sync!');
 
             } catch (error) {
                 console.error(error);
                 showToast('error', 'Gagal Sambung');
-                // Fallback: Simpan local je kalau internet tiada
+                // Fallback Offline
                 if (!isDelete && newRecord) {
-                     // Cari dan replace local
                      pdp_history = pdp_history.filter(h => !(h.minggu == newRecord.minggu && h.hari == newRecord.hari && h.kelas == newRecord.kelas && h.masa == newRecord.masa));
                      pdp_history.push(newRecord);
                      saveAllData();
@@ -310,31 +319,45 @@
             }
         }
 
-        async function silentCloudSync() {
-            showToast('loading', 'Sync...');
+        async function silentCloudSync(mode = 'manual') {
+            if (isEditing) return; // Jangan kacau kalau user tengah menaip
+
+            // Kalau auto, kita tak nak popup besar-besar
+            if (mode === 'manual' || mode === 'first') showToast('loading', 'Sync...');
+            
+            // Indikator kecil di header
+            document.getElementById('live-indicator').classList.remove('bg-red-500');
+            document.getElementById('live-indicator').classList.add('bg-yellow-400'); // Sedang check...
+
             try {
                 const response = await fetch(API_URL);
                 const data = await response.json();
+                
+                document.getElementById('live-indicator').classList.remove('bg-yellow-400');
+                document.getElementById('live-indicator').classList.add('bg-emerald-500'); // OK
+
                 if (data && data.status !== 'empty') {
-                    // Kita ambil data cloud sebagai 'Master'
                     if(data.history) pdp_history = data.history;
                     if(data.db) db_pelajar = data.db;
                     if(data.holidays) holidays = data.holidays;
                     if(data.startDate) startDate = data.startDate;
                     saveAllData(); 
                     updateProgress();
-                    showToast('success', 'Data Terkini');
+                    
+                    if (mode === 'manual' || mode === 'first') showToast('success', 'Data Terkini');
                 } else {
-                    showToast('success', 'Cloud Sedia');
+                    if (mode === 'manual') showToast('success', 'Cloud Sedia');
                 }
             } catch (error) {
-                document.getElementById('auto-save-toast').classList.remove('show');
+                document.getElementById('live-indicator').classList.remove('bg-yellow-400');
+                document.getElementById('live-indicator').classList.add('bg-red-500'); // Error
+                if (mode === 'manual') document.getElementById('auto-save-toast').classList.remove('show');
             }
         }
 
         async function manualSync() {
             Swal.fire({ title: 'Menyemak...', didOpen: () => Swal.showLoading() });
-            await silentCloudSync();
+            await silentCloudSync('manual');
             Swal.close();
         }
 
@@ -375,11 +398,12 @@
                 Swal.fire('Database Kosong', 'Sila isi Database dulu.', 'warning'); return; 
             }
 
+            isEditing = true; // LOCK: Jangan refresh masa ni
+
             // Cari rekod local
             const existingRecord = pdp_history.find(h => h.minggu == currentWeek && h.hari == day && h.kelas == className && h.masa == time);
             const data = existingRecord || { objektif: "", catatan: "", absent: [] };
 
-            // Bina List Murid
             let listHtml = `<div class="text-left scroll-hide" style="max-height:180px; overflow-y:auto; background:rgba(0,0,0,0.1); padding:10px; border-radius:8px;">`;
             db_pelajar[className].forEach((name, i) => {
                 const isAbsent = data.absent.includes(name);
@@ -391,7 +415,6 @@
             });
             listHtml += `</div>`;
 
-            // Popup Form
             const { value: result, isDenied } = await Swal.fire({
                 title: `<div class="flex flex-col"><span class="text-xs font-bold uppercase tracking-widest text-slate-400">M${currentWeek} | ${day} | ${time}</span><span class="text-lg">${subject} - ${className}</span></div>`,
                 html: `
@@ -419,6 +442,7 @@
                 confirmButtonColor: '#059669',
                 denyButtonColor: '#dc2626',
                 customClass: { popup: 'modal-bg' },
+                didClose: () => { isEditing = false; }, // UNLOCK: Boleh refresh balik
                 preConfirm: () => {
                     const checks = document.querySelectorAll('.absent-check');
                     let absent = [];
@@ -430,20 +454,18 @@
             });
 
             if (isDenied) {
-                // DELETE logic
                 const recordToDelete = { minggu: currentWeek, hari: day, kelas: className, masa: time };
-                await smartMergeSave(recordToDelete, true); // True = Delete Mode
+                await smartMergeSave(recordToDelete, true); 
                 Swal.fire('Dipadam', 'Rekod dikosongkan.', 'success');
             
             } else if (result) {
-                // SAVE logic
                 const newRecord = {
                     minggu: currentWeek, hari: day, masa: time, kelas: className, subjek: subject,
                     objektif: result.objektif, catatan: result.catatan, absent: result.absent,
                     hadir: db_pelajar[className].length - result.absent.length, total: db_pelajar[className].length
                 };
 
-                // UPDATE UI DULU (Supaya nampak laju)
+                // Update Local UI Immediately
                 pdp_history = pdp_history.filter(h => !(h.minggu == currentWeek && h.hari == day && h.kelas == className && h.masa == time));
                 pdp_history.push(newRecord);
                 updateProgress();
@@ -455,7 +477,7 @@
             }
         }
 
-        // --- LAIN-LAIN FUNCTION (SAMA MACAM DULU) ---
+        // --- LAIN-LAIN FUNCTION (SAMA) ---
         function initTheme() {
             const saved = localStorage.getItem('pdp_theme');
             if (saved) { document.body.className = `p-3 lg:p-6 ${saved} select-none`; } 
@@ -505,6 +527,7 @@
             if (row) { row.classList.add('today-highlight'); row.querySelector('.row-header')?.classList.add('today-header'); }
         }
         async function configDatabase() {
+            isEditing = true; // Pause sync
             const { value: formValues } = await Swal.fire({
                 title: 'DATABASE MURID',
                 html: `
@@ -524,6 +547,7 @@
                     updateText(); document.getElementById('sk').onchange = updateText;
                 },
                 showCancelButton: true, confirmButtonText: 'Simpan',
+                didClose: () => { isEditing = false; }, // Resume sync
                 preConfirm: () => { return { date: document.getElementById('sd').value, class: document.getElementById('sk').value, names: document.getElementById('sl').value } }
             });
 
@@ -534,7 +558,6 @@
                 localStorage.setItem('pdp_start_date', startDate);
                 localStorage.setItem('pdp_db', JSON.stringify(db_pelajar));
                 
-                // FORCE SAVE DB
                 const packet = { db: db_pelajar, history: pdp_history, holidays: holidays, startDate: startDate, theme: localStorage.getItem('pdp_theme') };
                 showToast('loading', 'Simpan DB...');
                 await fetch(API_URL, { method: 'POST', body: JSON.stringify(packet) });
@@ -542,11 +565,13 @@
             }
         }
         function masterReset() {
+            isEditing = true;
             Swal.fire({
                 title: 'RESET DATA',
                 input: 'select',
                 inputOptions: { 'week': `Padam M${currentWeek}`, 'all': 'Padam SEMUA', 'factory': 'Reset Kilang' },
-                showCancelButton: true, confirmButtonColor: '#dc2626', confirmButtonText: 'Reset'
+                showCancelButton: true, confirmButtonColor: '#dc2626', confirmButtonText: 'Reset',
+                didClose: () => { isEditing = false; }
             }).then(async (result) => {
                 if (result.value) {
                     if (result.value === 'week') pdp_history = pdp_history.filter(h => h.minggu !== currentWeek);
@@ -554,7 +579,6 @@
                     else localStorage.clear();
                     
                     saveAllData(); 
-                    // PUSH KOSONG KE CLOUD
                     const packet = { db: db_pelajar, history: pdp_history, holidays: holidays, startDate: startDate, theme: localStorage.getItem('pdp_theme') };
                     await fetch(API_URL, { method: 'POST', body: JSON.stringify(packet) });
                     location.reload();
@@ -585,7 +609,6 @@
             else holidays.push(currentWeek);
             localStorage.setItem('pdp_holidays', JSON.stringify(holidays)); 
             
-            // Sync Cuti
             const packet = { db: db_pelajar, history: pdp_history, holidays: holidays, startDate: startDate, theme: localStorage.getItem('pdp_theme') };
             fetch(API_URL, { method: 'POST', body: JSON.stringify(packet) });
             location.reload();
@@ -610,7 +633,8 @@
         window.onload = () => {
             if (sessionStorage.getItem('isLoggedIn') === 'true') {
                 document.getElementById('login-gate').style.display = 'none';
-                silentCloudSync(); 
+                silentCloudSync('first'); 
+                startAutoSync(); // Start timer terus
             }
             document.getElementById('password').addEventListener("keypress", function(event) { if (event.key === "Enter") checkLogin(); });
             initTheme(); renderWeeks(); updateProgress(); highlightToday();
