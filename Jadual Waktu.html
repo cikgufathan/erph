@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>E-RPH Cloud | Ustaz Fathan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background 0.3s, color 0.3s; -webkit-tap-highlight-color: transparent; }
+        
+        /* Tema Gelap */
+        body.dark-mode { background: #0f172a; color: #f8fafc; }
+        .dark-mode .glass { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+        .dark-mode .empty-slot { background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); }
+        .dark-mode .modal-bg { background: #1e293b; color: #fff; }
+        
+        /* Tema Cerah */
+        body.light-mode { background: #f8fafc; color: #1e293b; }
+        .light-mode .glass { background: white; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+        .light-mode .empty-slot { background: rgba(0,0,0,0.03); border: 1px dashed rgba(0,0,0,0.1); }
+        .light-mode .text-slate-400 { color: #64748b; }
+        .light-mode .modal-bg { background: #fff; color: #1e293b; }
+
+        /* Kelas & UI */
+        .class-ba { background: linear-gradient(135deg, #059669, #10b981); border-left: 4px solid #34d399; color: white !important; cursor: pointer; transition: transform 0.1s; }
+        .class-pi { background: linear-gradient(135deg, #2563eb, #3b82f6); border-left: 4px solid #60a5fa; color: white !important; cursor: pointer; transition: transform 0.1s; }
+        .class-ba:active, .class-pi:active { transform: scale(0.98); }
+        
+        .week-btn { min-width: 55px; height: 45px; border-radius: 8px; font-weight: bold; font-size: 11px; transition: 0.2s; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .week-active { background: #10b981 !important; color: white !important; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); border-color: #10b981 !important; }
+        
+        .is-holiday { filter: grayscale(1) opacity(0.5); pointer-events: none; position: relative; }
+        .is-holiday::after { content: "CUTI"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 50px; font-weight: 900; color: rgba(0,0,0,0.5); z-index: 10; letter-spacing: 10px; }
+
+        .scroll-hide::-webkit-scrollbar { display: none; }
+        .empty-slot { border-radius: 8px; height: 80px; }
+
+        /* Highlight Hari Ini */
+        .today-highlight { background: rgba(16, 185, 129, 0.1); border: 2px solid #10b981; }
+        .today-header { color: #10b981 !important; font-weight: 800 !important; }
+    </style>
+</head>
+<body class="p-3 lg:p-6 dark-mode select-none">
+
+    <div class="flex justify-between items-center mb-4">
+        <div id="week-container" class="flex gap-2 overflow-x-auto pb-2 scroll-hide flex-grow mr-4 scroll-smooth"></div>
+        <button onclick="toggleTheme()" id="theme-icon" class="glass w-10 h-10 flex items-center justify-center rounded-full text-lg shadow-lg hover:bg-slate-700/20 transition">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl md:text-3xl font-extrabold tracking-tighter uppercase">E-RPH CLOUD <span id="current-week-label" class="text-emerald-500">M1</span></h1>
+                <button onclick="toggleHoliday()" id="holiday-btn" class="bg-red-500/10 hover:bg-red-500/30 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[10px] font-bold uppercase transition">
+                    <i class="fas fa-umbrella-beach mr-1"></i> CUTI
+                </button>
+            </div>
+            <p id="week-date-range" class="text-emerald-500 font-bold text-xs mt-1 uppercase tracking-widest bg-emerald-500/10 inline-block px-2 py-1 rounded">...</p>
+        </div>
+        
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+            <button onclick="saveToCloud()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-white font-bold text-xs shadow-lg transition flex items-center gap-2 border border-blue-400">
+                <i class="fas fa-cloud-upload-alt"></i> SIMPAN CLOUD
+            </button>
+            <button onclick="loadFromCloud()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-white font-bold text-xs shadow-lg transition flex items-center gap-2 border border-purple-400">
+                <i class="fas fa-cloud-download-alt"></i> AMBIL CLOUD
+            </button>
+
+            <div class="h-8 w-px bg-slate-700/50 mx-1 hidden md:block"></div>
+
+            <button onclick="printWeeklyReport()" title="Cetak PDF" class="bg-orange-600 hover:bg-orange-500 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-file-pdf"></i></button>
+            <button onclick="configDatabase()" title="Database Murid" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-users"></i></button>
+            <button onclick="showStats()" title="Analisis" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-chart-pie"></i></button>
+            
+            <button onclick="exportData()" title="Backup File (Offline)" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-save"></i></button>
+            <button onclick="masterReset()" title="Reset" class="bg-red-600 hover:bg-red-500 px-3 py-2 rounded-lg text-white shadow-lg transition"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    </header>
+
+    <div class="mb-6 glass p-4 border-l-4 border-l-emerald-500 shadow-xl rounded-r-lg">
+        <div class="flex justify-between items-center mb-2">
+            <span class="text-[10px] font-bold uppercase text-slate-400 tracking-widest">KPI Minggu Ini</span>
+            <span id="completion-text" class="text-sm font-black text-emerald-500">0/12 KELAS</span>
+        </div>
+        <div class="w-full bg-black/20 rounded-full h-3 overflow-hidden border border-white/5">
+            <div id="completion-bar" class="bg-gradient-to-r from-emerald-600 to-emerald-400 h-full transition-all duration-700" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div id="main-schedule-area" class="glass overflow-hidden shadow-2xl rounded-xl mb-6 relative">
+        <div class="overflow-x-auto pb-2">
+            <table class="w-full text-center border-collapse min-w-[800px]">
+                <thead>
+                    <tr class="text-[10px] uppercase text-slate-500 border-b border-white/10 bg-black/5">
+                        <th class="p-3 border-r border-white/10 w-24">Hari</th>
+                        <th class="p-2 w-1/5">10:30 - 11:30</th>
+                        <th class="p-2 w-1/5">11:30 - 12:30</th>
+                        <th class="p-2 w-1/5">12:30 - 13:30</th>
+                        <th class="p-2 w-1/5">13:30 - 14:30</th>
+                        <th class="p-2 w-1/5">14:30 - 15:30</th>
+                    </tr>
+                </thead>
+                <tbody id="timetable-body" class="text-[11px] font-bold uppercase">
+                    
+                    <tr class="border-b border-white/5" id="row-Isnin">
+                        <td class="p-4 bg-black/5 border-r border-white/10 text-emerald-500 row-header">Isnin</td>
+                        <td class="p-1"><div class="empty-slot"></div></td>
+                        <td class="p-1"><div id="class-Isnin-1" onclick="openPdP('1Setia','BA','Isnin','11:30-12:30','class-Isnin-1')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>1 SETIA</span><span class="text-[9px] opacity-80">11:30 - 12:30</span></div></td>
+                        <td class="p-1"><div class="empty-slot"></div></td>
+                        <td class="p-1"><div id="class-Isnin-2" onclick="openPdP('3Setia','BA','Isnin','13:10-14:10','class-Isnin-2')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>3 SETIA</span><span class="text-[9px] opacity-80">13:10 - 14:10</span></div></td>
+                        <td class="p-1"><div class="empty-slot"></div></td>
+                    </tr>
+
+                    <tr class="border-b border-white/5" id="row-Selasa">
+                        <td class="p-4 bg-black/5 border-r border-white/10 text-emerald-500 row-header">Selasa</td>
+                        <td class="p-1"><div id="class-Selasa-1" onclick="openPdP('2Setia','BA','Selasa','10:30-11:30','class-Selasa-1')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">10:30 - 11:30</span></div></td>
+                        <td colspan="2" class="p-1"><div id="class-Selasa-2" onclick="openPdP('2AM/2BE','PI','Selasa','11:30-13:30','class-Selasa-2')" class="class-pi p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 AM / 2 BE</span><span class="text-[9px] opacity-80">11:30 - 13:30 (4 Masa)</span></div></td>
+                        <td class="p-1"><div class="empty-slot"></div></td>
+                        <td class="p-1"><div id="class-Selasa-3" onclick="openPdP('2Setia','BA','Selasa','14:30-15:30','class-Selasa-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">14:30 - 15:30</span></div></td>
+                    </tr>
+
+                    <tr class="border-b border-white/5" id="row-Rabu">
+                        <td class="p-4 bg-black/5 border-r border-white/10 text-emerald-500 row-header">Rabu</td>
+                        <td class="p-1"><div id="class-Rabu-1" onclick="openPdP('2AM/2BE','PI','Rabu','10:30-11:30','class-Rabu-1')" class="class-pi p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 AM / 2 BE</span><span class="text-[9px] opacity-80">10:30 - 11:30</span></div></td>
+                        <td class="p-1"><div id="class-Rabu-2" onclick="openPdP('1Setia','BA','Rabu','11:30-12:30','class-Rabu-2')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>1 SETIA</span><span class="text-[9px] opacity-80">11:30 - 12:30</span></div></td>
+                        <td class="p-1"><div class="empty-slot"></div></td>
+                        <td class="p-1"><div id="class-Rabu-3" onclick="openPdP('3Setia','BA','Rabu','13:10-14:10','class-Rabu-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>3 SETIA</span><span class="text-[9px] opacity-80">13:10 - 14:10</span></div></td>
+                        <td class="p-1"><div class="empty-slot"></div></td>
+                    </tr>
+
+                    <tr class="border-b border-white/5" id="row-Khamis">
+                        <td class="p-4 bg-black/5 border-r border-white/10 text-emerald-500 row-header">Khamis</td>
+                        <td class="p-1"><div class="empty-slot"></div></td>
+                        <td class="p-1"><div id="class-Khamis-1" onclick="openPdP('2Setia','BA','Khamis','11:30-12:30','class-Khamis-1')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">11:30 - 12:30</span></div></td>
+                        <td class="p-1"><div id="class-Khamis-2" onclick="openPdP('3Setia','BA','Khamis','12:40-13:40','class-Khamis-2')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>3 SETIA</span><span class="text-[9px] opacity-80">12:40 - 13:40</span></div></td>
+                        <td class="p-1"><div class="empty-slot"></div></td>
+                        <td class="p-1"><div id="class-Khamis-3" onclick="openPdP('1Setia','BA','Khamis','14:30-15:30','class-Khamis-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>1 SETIA</span><span class="text-[9px] opacity-80">14:30 - 15:30</span></div></td>
+                    </tr>
+
+                    <tr id="row-Jumaat">
+                        <td class="p-4 bg-black/5 border-r border-white/10 text-emerald-500 row-header">Jumaat</td>
+                        <td colspan="3" class="p-1"><div class="empty-slot"></div></td>
+                        <td class="p-1"><div id="class-Jumaat-1" onclick="openPdP('2AM/2BE','PI','Jumaat','13:30-14:30','class-Jumaat-1')" class="class-pi p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 AM / 2 BE</span><span class="text-[9px] opacity-80">13:30 - 14:30</span></div></td>
+                        <td class="p-1"><div class="empty-slot"></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // --- API CLOUD SERVER ---
+        const API_URL = "https://script.google.com/macros/s/AKfycbzGTwbMsZdavO_XasDfcg80-aHUw0gmz3yR7-yP6fLGOSVbfmp9WPr86OSCaTcJlUPYiQ/exec";
+
+        // --- KONFIGURASI DATA ---
+        let startDate = localStorage.getItem('pdp_start_date') || "2026-01-12";
+        let currentWeek = parseInt(localStorage.getItem('pdp_active_week')) || 1;
+        
+        const defaultDb = { 
+            "1Setia": ["AHMAD","ABU","SITI"], 
+            "2Setia": ["ALI","FATIMAH"], 
+            "3Setia": ["OMAR","HANA"], 
+            "2AM/2BE": ["ZACK","YANA"] 
+        };
+        let db_pelajar = JSON.parse(localStorage.getItem('pdp_db')) || defaultDb;
+        let pdp_history = JSON.parse(localStorage.getItem('pdp_history')) || [];
+        let holidays = JSON.parse(localStorage.getItem('pdp_holidays')) || [];
+
+        // --- CLOUD FUNCTIONS (SYNC) ---
+
+        async function saveToCloud() {
+            Swal.fire({
+                title: 'Sedang Sync...',
+                text: 'Menghantar data ke Google Sheets',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+            
+            const packet = {
+                db: db_pelajar,
+                history: pdp_history,
+                holidays: holidays,
+                startDate: startDate,
+                theme: localStorage.getItem('pdp_theme')
+            };
+
+            try {
+                // Apps Script Web App 'Anyone' access kadang-kadang hantar opaque response (no-cors)
+                // Kita guna fetch standard. Jika API diset dengan betul, ia akan ok.
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(packet)
+                });
+                
+                // Kerana response mungkin opaque dalam sesetengah browser environment,
+                // kita anggap berjaya jika tiada network error.
+                Swal.fire({
+                    title: 'Berjaya!',
+                    text: 'Data telah disimpan di Cloud.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Ralat Internet', 'Gagal menyambung ke server. Sila semak internet.', 'error');
+            }
+        }
+
+        async function loadFromCloud() {
+            Swal.fire({
+                title: 'Sedang Download...',
+                text: 'Mengambil data dari Google Sheets',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                if (data && data.status !== 'empty') {
+                    // Update Local Variables
+                    if(data.db) db_pelajar = data.db;
+                    if(data.history) pdp_history = data.history;
+                    if(data.holidays) holidays = data.holidays;
+                    if(data.startDate) startDate = data.startDate;
+                    
+                    // Simpan ke LocalStorage
+                    saveAllData(); 
+                    localStorage.setItem('pdp_db', JSON.stringify(db_pelajar));
+                    localStorage.setItem('pdp_start_date', startDate);
+                    if(data.theme) localStorage.setItem('pdp_theme', data.theme);
+
+                    Swal.fire({
+                        title: 'Berjaya!',
+                        text: 'Data terkini telah dimuat turun.',
+                        icon: 'success'
+                    }).then(() => location.reload());
+                } else {
+                    Swal.fire('Data Kosong', 'Tiada data dijumpai di Cloud (Server Baru). Sila simpan data dahulu.', 'info');
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Ralat', 'Gagal mengambil data. Pastikan ada internet.', 'error');
+            }
+        }
+
+        // --- CORE FUNCTIONS ---
+
+        function updateProgress() {
+            const count = pdp_history.filter(h => h.minggu == currentWeek).length;
+            const percentage = Math.min((count / 12) * 100, 100);
+            document.getElementById('completion-text').innerText = `${count}/12 KELAS SELESAI`;
+            document.getElementById('completion-bar').style.width = `${percentage}%`;
+            
+            document.querySelectorAll('[id^="class-"]').forEach(el => {
+                el.style.opacity = "1";
+                el.style.border = "none";
+                el.innerHTML = el.innerHTML.replace(' <i class="fas fa-check-circle text-white ml-1"></i>', '');
+            });
+
+            pdp_history.filter(h => h.minggu == currentWeek).forEach(record => {
+                const els = document.querySelectorAll(`[onclick*="'${record.kelas}'"][onclick*="'${record.hari}'"][onclick*="'${record.masa}'"]`);
+                els.forEach(el => {
+                    el.style.opacity = "0.6";
+                    el.style.border = "2px solid #fff";
+                    if(!el.innerHTML.includes('fa-check-circle')) {
+                        el.querySelector('span:first-child').innerHTML += ' <i class="fas fa-check-circle text-white ml-1"></i>';
+                    }
+                });
+            });
+        }
+
+        async function openPdP(className, subject, day, time, elementId) {
+            if (!db_pelajar[className] || db_pelajar[className].length === 0) { 
+                Swal.fire('Database Kosong', 'Sila masukkan senarai murid di butang "Database" dahulu.', 'warning'); 
+                return; 
+            }
+
+            const existingRecord = pdp_history.find(h => h.minggu == currentWeek && h.hari == day && h.kelas == className && h.masa == time);
+            const data = existingRecord || { objektif: "", catatan: "", absent: [] };
+
+            let listHtml = `<div class="text-left scroll-hide" style="max-height:180px; overflow-y:auto; background:rgba(0,0,0,0.1); padding:10px; border-radius:8px;">`;
+            db_pelajar[className].forEach((name, i) => {
+                const isAbsent = data.absent.includes(name);
+                listHtml += `
+                <div class="flex items-center mb-2 border-b border-gray-500/10 pb-1 cursor-pointer hover:bg-white/5 p-1 rounded">
+                    <input type="checkbox" id="st-${i}" class="absent-check w-4 h-4 mr-3 accent-red-500 cursor-pointer" ${isAbsent ? 'checked' : ''}>
+                    <label for="st-${i}" class="text-[11px] uppercase cursor-pointer flex-grow select-none">${name}</label>
+                </div>`;
+            });
+            listHtml += `</div>`;
+
+            const { value: result, isDenied } = await Swal.fire({
+                title: `<div class="flex flex-col"><span class="text-xs font-bold uppercase tracking-widest text-slate-400">M${currentWeek} | ${day} | ${time}</span><span class="text-lg">${subject} - ${className}</span></div>`,
+                html: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                        <div>
+                            <label class="text-[10px] font-bold uppercase mb-1 block">Objektif & Aktiviti:</label>
+                            <textarea id="sw-obj" class="w-full bg-black/5 border border-gray-500/20 p-2 rounded h-32 mb-3 text-xs focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ringkasan aktiviti...">${data.objektif}</textarea>
+                            <label class="text-[10px] font-bold uppercase text-emerald-500 mb-1 block">Refleksi / PBD:</label>
+                            <textarea id="sw-cat" class="w-full bg-black/5 border border-emerald-500/30 p-2 rounded h-20 text-xs focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Cth: 25/30 murid menguasai...">${data.catatan || ''}</textarea>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-bold uppercase text-red-500">Tanda Yang Tidak Hadir:</label>
+                                <span class="text-[9px] bg-slate-500 text-white px-2 rounded">Total: ${db_pelajar[className].length}</span>
+                            </div>
+                            ${listHtml}
+                        </div>
+                    </div>
+                `,
+                width: '750px',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: '<i class="fas fa-save mr-1"></i> SIMPAN',
+                denyButtonText: '<i class="fas fa-trash mr-1"></i> PADAM',
+                confirmButtonColor: '#059669',
+                denyButtonColor: '#dc2626',
+                customClass: { popup: 'modal-bg' },
+                preConfirm: () => {
+                    const checks = document.querySelectorAll('.absent-check');
+                    let absent = [];
+                    checks.forEach((c, i) => { if (c.checked) absent.push(db_pelajar[className][i]); });
+                    const obj = document.getElementById('sw-obj').value;
+                    if(!obj) { Swal.showValidationMessage('Sila tulis objektif ringkas'); return false; }
+                    return { objektif: obj, catatan: document.getElementById('sw-cat').value, absent: absent };
+                }
+            });
+
+            if (isDenied) {
+                pdp_history = pdp_history.filter(h => !(h.minggu == currentWeek && h.hari == day && h.kelas == className && h.masa == time));
+                saveAllData();
+                Swal.fire('Dipadam', 'Rekod dikosongkan.', 'success');
+                updateProgress();
+            } else if (result) {
+                pdp_history = pdp_history.filter(h => !(h.minggu == currentWeek && h.hari == day && h.kelas == className && h.masa == time));
+                const newRecord = {
+                    minggu: currentWeek, hari: day, masa: time, kelas: className, subjek: subject,
+                    objektif: result.objektif, catatan: result.catatan, absent: result.absent,
+                    hadir: db_pelajar[className].length - result.absent.length, total: db_pelajar[className].length
+                };
+                pdp_history.push(newRecord);
+                saveAllData();
+                updateProgress();
+                
+                Swal.fire({
+                    title: 'Disimpan!', text: 'Hantar ke WhatsApp?', icon: 'success',
+                    showCancelButton: true, confirmButtonText: 'Hantar', cancelButtonText: 'Tutup'
+                }).then((wa) => { if(wa.isConfirmed) shareWhatsApp(newRecord); });
+            }
+        }
+
+        function saveAllData() {
+            localStorage.setItem('pdp_history', JSON.stringify(pdp_history));
+            localStorage.setItem('pdp_holidays', JSON.stringify(holidays));
+        }
+
+        function initTheme() {
+            const saved = localStorage.getItem('pdp_theme');
+            if (saved) { document.body.className = `p-3 lg:p-6 ${saved} select-none`; } 
+            else { 
+                const hour = new Date().getHours(); 
+                document.body.className = `p-3 lg:p-6 ${hour < 7 || hour >= 19 ? 'dark-mode' : 'light-mode'} select-none`; 
+            }
+            updateThemeIcon();
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.contains('dark-mode');
+            document.body.classList.remove(isDark ? 'dark-mode' : 'light-mode');
+            document.body.classList.add(isDark ? 'light-mode' : 'dark-mode');
+            localStorage.setItem('pdp_theme', isDark ? 'light-mode' : 'dark-mode');
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const isDark = document.body.classList.contains('dark-mode');
+            document.querySelector('#theme-icon i').className = isDark ? 'fas fa-moon text-yellow-400' : 'fas fa-sun text-orange-500';
+        }
+
+        function calculateWeekDate(weekNum) {
+            let start = new Date(startDate);
+            start.setDate(start.getDate() + (weekNum - 1) * 7);
+            let end = new Date(start);
+            end.setDate(end.getDate() + 4);
+            return `${start.toLocaleDateString('ms-MY', {day:'2-digit', month:'short'})} - ${end.toLocaleDateString('ms-MY', {day:'2-digit', month:'short', year:'numeric'})}`;
+        }
+
+        function renderWeeks() {
+            const container = document.getElementById('week-container');
+            container.innerHTML = '';
+            for (let i = 1; i <= 42; i++) {
+                const hasData = pdp_history.some(h => h.minggu == i);
+                const isCuti = holidays.includes(i);
+                const btn = document.createElement('button');
+                btn.id = `week-btn-${i}`;
+                btn.className = `week-btn flex-shrink-0 ${i == currentWeek ? 'week-active' : 'bg-slate-800/50 text-slate-500'} ${hasData ? 'border-b-4 border-b-emerald-400' : ''}`;
+                btn.innerHTML = `<span class="text-xs">M${i}</span>${isCuti ? '<span style="font-size:8px; line-height:1" class="text-red-400 font-bold">CUTI</span>' : ''}`;
+                btn.onclick = () => { currentWeek = i; localStorage.setItem('pdp_active_week', i); location.reload(); };
+                container.appendChild(btn);
+            }
+            setTimeout(() => {
+                const activeBtn = document.getElementById(`week-btn-${currentWeek}`);
+                if(activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }, 500);
+        }
+
+        function highlightToday() {
+            const days = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
+            const today = days[new Date().getDay()];
+            const row = document.getElementById(`row-${today}`);
+            if (row) {
+                row.classList.add('today-highlight');
+                row.querySelector('.row-header')?.classList.add('today-header');
+            }
+        }
+
+        async function configDatabase() {
+            const { value: f } = await Swal.fire({
+                title: 'DATABASE MURID',
+                html: `
+                <div class="text-left">
+                    <label class="text-[10px] font-bold">TARIKH MULA SESI:</label>
+                    <input type="date" id="sd" class="w-full p-2 mb-3 border rounded bg-black/5" value="${startDate}">
+                    <label class="text-[10px] font-bold">PILIH KELAS:</label>
+                    <select id="sk" class="w-full p-2 mb-2 border rounded bg-black/5">
+                        ${Object.keys(db_pelajar).map(k => `<option value="${k}">${k}</option>`).join('')}
+                    </select>
+                    <label class="text-[10px] font-bold">SENARAI NAMA (Baris demi baris):</label>
+                    <textarea id="sl" class="w-full p-2 h-40 border rounded font-mono text-xs bg-black/5" placeholder="Paste nama murid..."></textarea>
+                </div>`,
+                customClass: { popup: 'modal-bg' },
+                didOpen: () => {
+                    const updateText = () => { document.getElementById('sl').value = (db_pelajar[document.getElementById('sk').value] || []).join('\n'); };
+                    updateText(); document.getElementById('sk').onchange = updateText;
+                },
+                showCancelButton: true, confirmButtonText: 'Simpan'
+            });
+            if (f) {
+                startDate = document.getElementById('sd').value;
+                const currentClass = document.getElementById('sk').value;
+                db_pelajar[currentClass] = document.getElementById('sl').value.split('\n').map(n => n.trim()).filter(n => n !== "");
+                localStorage.setItem('pdp_start_date', startDate);
+                localStorage.setItem('pdp_db', JSON.stringify(db_pelajar));
+                Swal.fire('Disimpan', 'Database dikemaskini.', 'success').then(() => location.reload());
+            }
+        }
+
+        function masterReset() {
+            Swal.fire({
+                title: 'RESET DATA',
+                input: 'select',
+                inputOptions: { 'week': `Padam M${currentWeek} Sahaja`, 'all': 'Padam SEMUA Rekod', 'factory': 'Reset Kilang (Semua)' },
+                showCancelButton: true, confirmButtonColor: '#dc2626', confirmButtonText: 'Laksanakan'
+            }).then((result) => {
+                if (result.value) {
+                    if (result.value === 'week') pdp_history = pdp_history.filter(h => h.minggu !== currentWeek);
+                    else if (result.value === 'all') pdp_history = [];
+                    else localStorage.clear();
+                    saveAllData(); location.reload();
+                }
+            });
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ db: db_pelajar, history: pdp_history, holidays: holidays, startDate: startDate, theme: localStorage.getItem('pdp_theme') }));
+            const a = document.createElement('a'); a.href = dataStr; a.download = "Backup_PDP_" + new Date().toISOString().slice(0,10) + ".json";
+            document.body.appendChild(a); a.click(); a.remove();
+        }
+
+        function shareWhatsApp(record) {
+            const absentList = record.absent.length > 0 ? record.absent.map((n, i) => `${i+1}. ${n}`).join('%0A') : '- Tiada -';
+            const msg = `*LAPORAN PDP - ${record.kelas}*%0A🗓 ${record.hari} | M${record.minggu}%0A📖 ${record.subjek} (${record.masa})%0A📝 *Objektif:* ${record.objektif}%0A📊 *Kehadiran:* ${record.hadir}/${record.total}%0A-----------------------%0A*YANG TIDAK HADIR:*%0A${absentList}`;
+            window.open(`https://wa.me/?text=${msg}`, '_blank');
+        }
+
+        function printWeeklyReport() {
+            const weekData = pdp_history.filter(h => h.minggu == currentWeek);
+            if (weekData.length === 0) { Swal.fire('Tiada Data', 'Tiada rekod untuk minggu ini.', 'info'); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            doc.setFontSize(14); doc.text(`LAPORAN PDP - MINGGU ${currentWeek}`, 14, 15);
+            doc.setFontSize(10); doc.text(`Tarikh: ${calculateWeekDate(currentWeek)}`, 14, 22);
+            doc.autoTable({
+                startY: 28, head: [['Hari/Masa', 'Kelas/Subjek', 'Objektif/Aktiviti', 'Refleksi/Catatan', 'Hadir']],
+                body: weekData.map(d => [`${d.hari}\n${d.masa}`, `${d.kelas}\n${d.subjek}`, d.objektif, d.catatan || '-', `${d.hadir}/${d.total}\n(${(d.hadir/d.total*100).toFixed(0)}%)`]),
+                theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255 }
+            });
+            doc.save(`Laporan_PDP_M${currentWeek}.pdf`);
+        }
+
+        function toggleHoliday() {
+            if (holidays.includes(currentWeek)) holidays = holidays.filter(w => w !== currentWeek);
+            else holidays.push(currentWeek);
+            localStorage.setItem('pdp_holidays', JSON.stringify(holidays)); location.reload();
+        }
+
+        function showStats() {
+            let html = '<div class="space-y-4 text-left">';
+            let gTotal = 0, gPresent = 0;
+            for(let cls in db_pelajar) {
+                const recs = pdp_history.filter(r => r.kelas === cls);
+                if(recs.length > 0) {
+                    const t = recs.reduce((a,b)=>a+b.total,0), p = recs.reduce((a,b)=>a+b.hadir,0);
+                    const r = ((p/t)*100).toFixed(1); gTotal+=t; gPresent+=p;
+                    html += `<div><div class="flex justify-between text-xs font-bold uppercase mb-1"><span>${cls} (${recs.length} Sesi)</span><span>${r}%</span></div><div class="w-full bg-black/10 h-2 rounded-full overflow-hidden"><div class="bg-blue-500 h-full" style="width:${r}%"></div></div></div>`;
+                }
+            }
+            const o = gTotal > 0 ? ((gPresent/gTotal)*100).toFixed(1) : 0;
+            html += `<div class="mt-4 pt-4 border-t border-gray-500/20 text-center font-bold text-xl text-emerald-500">PURATA: ${o}%</div></div>`;
+            Swal.fire({ title: 'Analisis Kehadiran', html: html, customClass: { popup: 'modal-bg' } });
+        }
+
+        window.onload = () => {
+            initTheme(); renderWeeks(); updateProgress(); highlightToday();
+            if (holidays.includes(currentWeek)) document.getElementById('main-schedule-area').classList.add('is-holiday');
+            document.getElementById('current-week-label').innerText = `M${currentWeek}`;
+            document.getElementById('week-date-range').innerText = calculateWeekDate(currentWeek);
+        };
+    </script>
+</body>
+</html>
