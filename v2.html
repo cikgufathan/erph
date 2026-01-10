@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>E-RPH V2 (Dynamic)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f172a; color: white; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+        .slot-box { transition: 0.1s; cursor: pointer; border-radius: 8px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed rgba(255,255,255,0.1); }
+        .slot-active { border: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+        .slot-active:active { transform: scale(0.98); }
+        .modal-bg { background: #1e293b !important; color: #fff !important; }
+    </style>
+</head>
+<body class="p-4 select-none">
+
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-extrabold text-emerald-400">E-RPH V2</h1>
+            <p class="text-xs text-slate-400">Versi Dinamik (Admin Mode)</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openSettings()" class="bg-blue-600 px-4 py-2 rounded-lg text-white text-xs font-bold shadow-lg"><i class="fas fa-cogs mr-1"></i> SETTING</button>
+            <button onclick="location.href='index.html'" class="bg-slate-700 px-4 py-2 rounded-lg text-white text-xs font-bold"><i class="fas fa-home mr-1"></i> MENU</button>
+        </div>
+    </div>
+
+    <div class="glass p-1 rounded-xl overflow-x-auto shadow-2xl">
+        <table class="w-full min-w-[600px] text-center">
+            <thead>
+                <tr class="text-[10px] uppercase text-slate-500 bg-black/20">
+                    <th class="p-3 w-20">Hari</th>
+                    </tr>
+            </thead>
+            <tbody id="timetable-body">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        // --- DATA STRUKTUR BARU (V2) ---
+        // Kita simpan semua setting dalam variable ini
+        const defaultData = {
+            masa: ["07:30-08:30", "08:30-09:30", "09:30-10:30", "10:30-11:30", "11:30-12:30"], // Boleh tambah
+            hari: ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis"],
+            subjek: ["BAHASA ARAB", "PENDIDIKAN ISLAM", "TASMIK", "AL-QURAN"],
+            kelas: {
+                "1 SETIA": ["ALI", "ABU", "BAKAR"], 
+                "2 MAJU": ["SITI", "AMINAH"],
+                "3 JAYA": ["ZAMRI", "KAMAL"]
+            },
+            jadual: {} // Format: "Isnin-0" : {kelas: "1 SETIA", subjek: "BAHASA ARAB"}
+        };
+
+        // Load dari memori atau guna default
+        let appData = JSON.parse(localStorage.getItem('erph_v2_data')) || defaultData;
+
+        // --- FUNGSI RENDER JADUAL (KUNCI UTAMA) ---
+        function renderJadual() {
+            const tbody = document.getElementById('timetable-body');
+            const thead = document.querySelector('thead tr');
+            
+            // 1. Lukis Header Masa
+            let headHtml = `<th class="p-3 w-20 border-r border-white/5">HARI</th>`;
+            appData.masa.forEach(m => {
+                headHtml += `<th class="p-2 text-emerald-500">${m}</th>`;
+            });
+            thead.innerHTML = headHtml;
+
+            // 2. Lukis Body Hari
+            tbody.innerHTML = '';
+            appData.hari.forEach(hari => {
+                let rowHtml = `<tr class="border-b border-white/5">`;
+                rowHtml += `<td class="p-3 font-bold text-emerald-400 bg-black/10 border-r border-white/5">${hari}</td>`;
+                
+                appData.masa.forEach((masa, index) => {
+                    // Cek database jadual, ada tak kelas waktu ni?
+                    const key = `${hari}-${index}`;
+                    const slotData = appData.jadual[key];
+
+                    if (slotData) {
+                        // Kalau ada kelas
+                        rowHtml += `
+                        <td class="p-1">
+                            <div onclick="editSlot('${hari}', ${index})" class="slot-box slot-active bg-gradient-to-br from-emerald-600 to-emerald-800 text-white">
+                                <span class="font-bold text-xs">${slotData.kelas}</span>
+                                <span class="text-[9px] opacity-80">${slotData.subjek}</span>
+                            </div>
+                        </td>`;
+                    } else {
+                        // Kalau kosong
+                        rowHtml += `
+                        <td class="p-1">
+                            <div onclick="editSlot('${hari}', ${index})" class="slot-box hover:bg-white/5">
+                                <i class="fas fa-plus text-slate-600 text-xs"></i>
+                            </div>
+                        </td>`;
+                    }
+                });
+                rowHtml += `</tr>`;
+                tbody.innerHTML += rowHtml;
+            });
+        }
+
+        // --- FUNGSI EDIT SETTING / JADUAL ---
+        
+        async function editSlot(hari, index) {
+            const key = `${hari}-${index}`;
+            const current = appData.jadual[key];
+
+            // Option untuk Subjek
+            let subjekHtml = appData.subjek.map(s => `<option value="${s}">${s}</option>`).join('');
+            
+            // Option untuk Kelas (Ambil dari key object kelas)
+            let kelasHtml = Object.keys(appData.kelas).map(k => `<option value="${k}">${k}</option>`).join('');
+
+            const { value: formValues } = await Swal.fire({
+                title: `Edit Slot: ${hari}`,
+                html: `
+                    <div class="text-left space-y-3">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400">KELAS</label>
+                            <select id="sw-kelas" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
+                                <option value="">- KOSONG (REHAT) -</option>
+                                ${kelasHtml}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400">SUBJEK</label>
+                            <select id="sw-subjek" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
+                                ${subjekHtml}
+                            </select>
+                        </div>
+                    </div>
+                `,
+                customClass: { popup: 'modal-bg' },
+                showCancelButton: true,
+                confirmButtonText: 'Simpan',
+                confirmButtonColor: '#10b981',
+                didOpen: () => {
+                    if(current) {
+                        document.getElementById('sw-kelas').value = current.kelas;
+                        document.getElementById('sw-subjek').value = current.subjek;
+                    }
+                },
+                preConfirm: () => {
+                    return {
+                        kelas: document.getElementById('sw-kelas').value,
+                        subjek: document.getElementById('sw-subjek').value
+                    }
+                }
+            });
+
+            if (formValues) {
+                if (formValues.kelas === "") {
+                    // Kalau user pilih kosong, buang dari jadual
+                    delete appData.jadual[key];
+                } else {
+                    // Simpan data
+                    appData.jadual[key] = {
+                        kelas: formValues.kelas,
+                        subjek: formValues.subjek
+                    };
+                }
+                saveAndRender();
+            }
+        }
+
+        async function openSettings() {
+            const { value: choice } = await Swal.fire({
+                title: 'Pengurusan V2',
+                input: 'select',
+                inputOptions: {
+                    'kelas': '➕ Tambah/Buang Kelas & Murid',
+                    'subjek': '📚 Tambah/Buang Subjek',
+                    'masa': '⏰ Ubah Slot Masa'
+                },
+                inputPlaceholder: 'Pilih Menu',
+                showCancelButton: true,
+                customClass: { popup: 'modal-bg' }
+            });
+
+            if (choice === 'subjek') {
+                manageArray('subjek', 'Senarai Subjek');
+            } else if (choice === 'masa') {
+                manageArray('masa', 'Senarai Masa (Format: 08:00-09:00)');
+            } else if (choice === 'kelas') {
+                manageKelas();
+            }
+        }
+
+        // Fungsi urus list simple (Subjek/Masa)
+        async function manageArray(type, title) {
+            const list = appData[type].join('\n');
+            const { value: text } = await Swal.fire({
+                title: title,
+                input: 'textarea',
+                inputValue: list,
+                inputPlaceholder: 'Satu baris satu item',
+                customClass: { popup: 'modal-bg' },
+                showCancelButton: true,
+                confirmButtonText: 'Simpan'
+            });
+
+            if (text !== undefined) {
+                appData[type] = text.split('\n').filter(i => i.trim() !== "");
+                saveAndRender();
+            }
+        }
+
+        // Fungsi urus Kelas (Complex sikit sebab ada murid)
+        async function manageKelas() {
+            // 1. Pilih Kelas atau Buat Baru
+            const classNames = Object.keys(appData.kelas);
+            let options = {};
+            classNames.forEach(c => options[c] = c);
+            options['NEW'] = '+ DAFTAR KELAS BARU';
+
+            const { value: selectedClass } = await Swal.fire({
+                title: 'Pilih Kelas',
+                input: 'select',
+                inputOptions: options,
+                customClass: { popup: 'modal-bg' }
+            });
+
+            if (!selectedClass) return;
+
+            let targetClass = selectedClass;
+            let studentList = "";
+
+            if (selectedClass === 'NEW') {
+                const { value: newName } = await Swal.fire({ 
+                    title: 'Nama Kelas Baru', 
+                    input: 'text',
+                    customClass: { popup: 'modal-bg' }
+                });
+                if (!newName) return;
+                targetClass = newName.toUpperCase();
+            } else {
+                studentList = appData.kelas[targetClass].join('\n');
+            }
+
+            // 2. Edit Murid
+            const { value: newStudents } = await Swal.fire({
+                title: `Murid Kelas ${targetClass}`,
+                input: 'textarea',
+                inputValue: studentList,
+                inputPlaceholder: 'Senarai nama murid (Satu baris satu nama)',
+                customClass: { popup: 'modal-bg' },
+                heightAuto: false,
+                customClass: { input: 'h-40 text-xs' }
+            });
+
+            if (newStudents !== undefined) {
+                const arr = newStudents.split('\n').filter(n => n.trim() !== "");
+                if (arr.length === 0 && selectedClass !== 'NEW') {
+                    // Kalau kosongkan nama, tanya nak delete kelas ke?
+                    delete appData.kelas[targetClass];
+                } else {
+                    appData.kelas[targetClass] = arr;
+                }
+                saveAndRender();
+                Swal.fire('Berjaya', 'Data kelas dikemaskini', 'success');
+            }
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('erph_v2_data', JSON.stringify(appData));
+            renderJadual();
+        }
+
+        // Start
+        renderJadual();
+
+    </script>
+</body>
+</html>
