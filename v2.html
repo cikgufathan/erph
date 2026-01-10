@@ -33,8 +33,7 @@
     <div class="glass p-1 rounded-xl overflow-x-auto shadow-2xl">
         <table class="w-full min-w-[600px] text-center">
             <thead>
-                <tr class="text-[10px] uppercase text-slate-500 bg-black/20">
-                    <th class="p-3 w-20">Hari</th>
+                <tr class="text-[10px] uppercase text-slate-500 bg-black/20" id="header-row">
                     </tr>
             </thead>
             <tbody id="timetable-body">
@@ -43,32 +42,31 @@
     </div>
 
     <script>
-        // --- DATA STRUKTUR BARU (V2) ---
-        // Kita simpan semua setting dalam variable ini
+        // --- DATA STRUKTUR V2 (FIXED ISNIN-JUMAAT) ---
         const defaultData = {
-            masa: ["07:30-08:30", "08:30-09:30", "09:30-10:30", "10:30-11:30", "11:30-12:30"], // Boleh tambah
-            hari: ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis"],
+            masa: ["07:30-08:30", "08:30-09:30", "09:30-10:30", "10:30-11:30", "11:30-12:30"], 
+            hari: ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat"], // Dah betulkan!
             subjek: ["BAHASA ARAB", "PENDIDIKAN ISLAM", "TASMIK", "AL-QURAN"],
             kelas: {
                 "1 SETIA": ["ALI", "ABU", "BAKAR"], 
                 "2 MAJU": ["SITI", "AMINAH"],
                 "3 JAYA": ["ZAMRI", "KAMAL"]
             },
-            jadual: {} // Format: "Isnin-0" : {kelas: "1 SETIA", subjek: "BAHASA ARAB"}
+            jadual: {} 
         };
 
-        // Load dari memori atau guna default
-        let appData = JSON.parse(localStorage.getItem('erph_v2_data')) || defaultData;
+        // Guna key 'erph_v2_db' supaya dia tak baca data lama yang salah
+        let appData = JSON.parse(localStorage.getItem('erph_v2_db')) || defaultData;
 
-        // --- FUNGSI RENDER JADUAL (KUNCI UTAMA) ---
+        // --- FUNGSI RENDER JADUAL ---
         function renderJadual() {
             const tbody = document.getElementById('timetable-body');
-            const thead = document.querySelector('thead tr');
+            const thead = document.getElementById('header-row');
             
             // 1. Lukis Header Masa
-            let headHtml = `<th class="p-3 w-20 border-r border-white/5">HARI</th>`;
+            let headHtml = `<th class="p-3 w-24 border-r border-white/5 bg-black/30 sticky left-0 z-10">HARI</th>`;
             appData.masa.forEach(m => {
-                headHtml += `<th class="p-2 text-emerald-500">${m}</th>`;
+                headHtml += `<th class="p-2 text-emerald-500 min-w-[100px]">${m}</th>`;
             });
             thead.innerHTML = headHtml;
 
@@ -76,15 +74,13 @@
             tbody.innerHTML = '';
             appData.hari.forEach(hari => {
                 let rowHtml = `<tr class="border-b border-white/5">`;
-                rowHtml += `<td class="p-3 font-bold text-emerald-400 bg-black/10 border-r border-white/5">${hari}</td>`;
+                rowHtml += `<td class="p-3 font-bold text-emerald-400 bg-black/30 border-r border-white/5 sticky left-0 z-10">${hari}</td>`;
                 
                 appData.masa.forEach((masa, index) => {
-                    // Cek database jadual, ada tak kelas waktu ni?
                     const key = `${hari}-${index}`;
                     const slotData = appData.jadual[key];
 
                     if (slotData) {
-                        // Kalau ada kelas
                         rowHtml += `
                         <td class="p-1">
                             <div onclick="editSlot('${hari}', ${index})" class="slot-box slot-active bg-gradient-to-br from-emerald-600 to-emerald-800 text-white">
@@ -93,11 +89,10 @@
                             </div>
                         </td>`;
                     } else {
-                        // Kalau kosong
                         rowHtml += `
                         <td class="p-1">
-                            <div onclick="editSlot('${hari}', ${index})" class="slot-box hover:bg-white/5">
-                                <i class="fas fa-plus text-slate-600 text-xs"></i>
+                            <div onclick="editSlot('${hari}', ${index})" class="slot-box hover:bg-white/5 group">
+                                <i class="fas fa-plus text-slate-600 text-xs group-hover:text-emerald-500"></i>
                             </div>
                         </td>`;
                     }
@@ -107,32 +102,29 @@
             });
         }
 
-        // --- FUNGSI EDIT SETTING / JADUAL ---
-        
+        // --- FUNGSI EDIT SLOT ---
         async function editSlot(hari, index) {
             const key = `${hari}-${index}`;
             const current = appData.jadual[key];
-
-            // Option untuk Subjek
-            let subjekHtml = appData.subjek.map(s => `<option value="${s}">${s}</option>`).join('');
             
-            // Option untuk Kelas (Ambil dari key object kelas)
+            // Generate options
+            let subjekHtml = appData.subjek.map(s => `<option value="${s}">${s}</option>`).join('');
             let kelasHtml = Object.keys(appData.kelas).map(k => `<option value="${k}">${k}</option>`).join('');
 
             const { value: formValues } = await Swal.fire({
-                title: `Edit Slot: ${hari}`,
+                title: `Slot: ${hari}`,
                 html: `
                     <div class="text-left space-y-3">
                         <div>
                             <label class="text-xs font-bold text-slate-400">KELAS</label>
-                            <select id="sw-kelas" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
-                                <option value="">- KOSONG (REHAT) -</option>
+                            <select id="sw-kelas" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm">
+                                <option value="">- TIADA (DELETE) -</option>
                                 ${kelasHtml}
                             </select>
                         </div>
                         <div>
                             <label class="text-xs font-bold text-slate-400">SUBJEK</label>
-                            <select id="sw-subjek" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white">
+                            <select id="sw-subjek" class="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm">
                                 ${subjekHtml}
                             </select>
                         </div>
@@ -149,52 +141,44 @@
                     }
                 },
                 preConfirm: () => {
-                    return {
-                        kelas: document.getElementById('sw-kelas').value,
-                        subjek: document.getElementById('sw-subjek').value
-                    }
+                    return { kelas: document.getElementById('sw-kelas').value, subjek: document.getElementById('sw-subjek').value }
                 }
             });
 
             if (formValues) {
-                if (formValues.kelas === "") {
-                    // Kalau user pilih kosong, buang dari jadual
-                    delete appData.jadual[key];
-                } else {
-                    // Simpan data
-                    appData.jadual[key] = {
-                        kelas: formValues.kelas,
-                        subjek: formValues.subjek
-                    };
-                }
+                if (formValues.kelas === "") delete appData.jadual[key];
+                else appData.jadual[key] = { kelas: formValues.kelas, subjek: formValues.subjek };
                 saveAndRender();
             }
         }
 
+        // --- FUNGSI SETTING UTAMA ---
         async function openSettings() {
             const { value: choice } = await Swal.fire({
-                title: 'Pengurusan V2',
+                title: 'Tetapan V2',
                 input: 'select',
                 inputOptions: {
                     'kelas': '➕ Tambah/Buang Kelas & Murid',
                     'subjek': '📚 Tambah/Buang Subjek',
-                    'masa': '⏰ Ubah Slot Masa'
+                    'masa': '⏰ Ubah Slot Masa',
+                    'hari': '📅 Ubah Senarai Hari',
+                    'reset': '⚠️ Reset Semua Data'
                 },
-                inputPlaceholder: 'Pilih Menu',
+                inputPlaceholder: 'Sila Pilih...',
                 showCancelButton: true,
                 customClass: { popup: 'modal-bg' }
             });
 
-            if (choice === 'subjek') {
-                manageArray('subjek', 'Senarai Subjek');
-            } else if (choice === 'masa') {
-                manageArray('masa', 'Senarai Masa (Format: 08:00-09:00)');
-            } else if (choice === 'kelas') {
-                manageKelas();
+            if (choice === 'subjek') manageArray('subjek', 'Senarai Subjek');
+            else if (choice === 'masa') manageArray('masa', 'Senarai Masa (08:00-09:00)');
+            else if (choice === 'hari') manageArray('hari', 'Senarai Hari (Isnin, Selasa...)');
+            else if (choice === 'kelas') manageKelas();
+            else if (choice === 'reset') {
+                localStorage.removeItem('erph_v2_db');
+                location.reload();
             }
         }
 
-        // Fungsi urus list simple (Subjek/Masa)
         async function manageArray(type, title) {
             const list = appData[type].join('\n');
             const { value: text } = await Swal.fire({
@@ -203,8 +187,7 @@
                 inputValue: list,
                 inputPlaceholder: 'Satu baris satu item',
                 customClass: { popup: 'modal-bg' },
-                showCancelButton: true,
-                confirmButtonText: 'Simpan'
+                showCancelButton: true, confirmButtonText: 'Simpan'
             });
 
             if (text !== undefined) {
@@ -213,19 +196,14 @@
             }
         }
 
-        // Fungsi urus Kelas (Complex sikit sebab ada murid)
         async function manageKelas() {
-            // 1. Pilih Kelas atau Buat Baru
             const classNames = Object.keys(appData.kelas);
             let options = {};
             classNames.forEach(c => options[c] = c);
-            options['NEW'] = '+ DAFTAR KELAS BARU';
+            options['NEW'] = '+ KELAS BARU';
 
             const { value: selectedClass } = await Swal.fire({
-                title: 'Pilih Kelas',
-                input: 'select',
-                inputOptions: options,
-                customClass: { popup: 'modal-bg' }
+                title: 'Pilih Kelas', input: 'select', inputOptions: options, customClass: { popup: 'modal-bg' }
             });
 
             if (!selectedClass) return;
@@ -234,49 +212,34 @@
             let studentList = "";
 
             if (selectedClass === 'NEW') {
-                const { value: newName } = await Swal.fire({ 
-                    title: 'Nama Kelas Baru', 
-                    input: 'text',
-                    customClass: { popup: 'modal-bg' }
-                });
+                const { value: newName } = await Swal.fire({ title: 'Nama Kelas', input: 'text', customClass: { popup: 'modal-bg' } });
                 if (!newName) return;
                 targetClass = newName.toUpperCase();
             } else {
                 studentList = appData.kelas[targetClass].join('\n');
             }
 
-            // 2. Edit Murid
             const { value: newStudents } = await Swal.fire({
-                title: `Murid Kelas ${targetClass}`,
-                input: 'textarea',
-                inputValue: studentList,
-                inputPlaceholder: 'Senarai nama murid (Satu baris satu nama)',
-                customClass: { popup: 'modal-bg' },
-                heightAuto: false,
-                customClass: { input: 'h-40 text-xs' }
+                title: `Murid: ${targetClass}`, input: 'textarea', inputValue: studentList,
+                inputPlaceholder: 'Senarai Nama...', customClass: { popup: 'modal-bg' }
             });
 
             if (newStudents !== undefined) {
                 const arr = newStudents.split('\n').filter(n => n.trim() !== "");
-                if (arr.length === 0 && selectedClass !== 'NEW') {
-                    // Kalau kosongkan nama, tanya nak delete kelas ke?
-                    delete appData.kelas[targetClass];
-                } else {
-                    appData.kelas[targetClass] = arr;
-                }
+                if (arr.length === 0 && selectedClass !== 'NEW') delete appData.kelas[targetClass];
+                else appData.kelas[targetClass] = arr;
                 saveAndRender();
-                Swal.fire('Berjaya', 'Data kelas dikemaskini', 'success');
+                Swal.fire('Disimpan', '', 'success');
             }
         }
 
         function saveAndRender() {
-            localStorage.setItem('erph_v2_data', JSON.stringify(appData));
+            localStorage.setItem('erph_v2_db', JSON.stringify(appData));
             renderJadual();
         }
 
-        // Start
+        // INIT
         renderJadual();
-
     </script>
 </body>
 </html>
