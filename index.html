@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>E-RPH Secure | Ustaz Fathan</title>
+    <title>E-RPH AutoCloud | Ustaz Fathan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -41,9 +41,23 @@
         .empty-slot { border-radius: 8px; height: 80px; }
         .today-highlight { background: rgba(16, 185, 129, 0.1); border: 2px solid #10b981; }
         .today-header { color: #10b981 !important; font-weight: 800 !important; }
+
+        /* Toast Notification untuk Auto Save */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; }
+        .toast { display: flex; items-center; padding: 12px 20px; border-radius: 10px; background: #10b981; color: white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); transform: translateY(100px); opacity: 0; transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-spinner { border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 2px solid #fff; width: 16px; height: 16px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; margin-right: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="p-3 lg:p-6 dark-mode select-none">
+
+    <div id="toast-container">
+        <div id="auto-save-toast" class="toast">
+            <div class="toast-spinner"></div>
+            <span class="text-xs font-bold">Auto-Save ke Cloud...</span>
+        </div>
+    </div>
 
     <div id="login-gate" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4 transition-opacity duration-500">
         <div class="glass p-8 rounded-2xl shadow-2xl w-full max-w-sm border border-emerald-500/30 text-center relative overflow-hidden">
@@ -55,7 +69,6 @@
                 <h2 class="text-2xl font-extrabold text-white tracking-tight">E-RPH SECURE</h2>
                 <p class="text-slate-400 text-xs mt-1 font-medium">Sistem Pengurusan & Pelaporan PdP</p>
             </div>
-            
             <div class="space-y-3">
                 <div class="relative">
                     <i class="fas fa-user absolute left-4 top-3.5 text-slate-500 text-sm"></i>
@@ -66,17 +79,15 @@
                     <input type="password" id="password" placeholder="Kata Laluan" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-emerald-500 focus:bg-slate-800 outline-none transition text-sm font-semibold">
                 </div>
             </div>
-            
             <button onclick="checkLogin()" class="w-full mt-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transform transition active:scale-95 flex items-center justify-center gap-2">
                 LOG MASUK <i class="fas fa-arrow-right text-xs"></i>
             </button>
-            
             <p id="login-msg" class="text-red-400 text-xs mt-4 hidden font-bold bg-red-500/10 py-2 rounded-lg border border-red-500/20 animate-pulse">
                 <i class="fas fa-exclamation-triangle mr-1"></i> ID atau Kata Laluan Salah!
             </p>
-            <p class="text-[10px] text-slate-600 mt-6">Versi Cloud 2.0 | Secured by GitHub</p>
         </div>
     </div>
+
     <div class="flex justify-between items-center mb-4">
         <div id="week-container" class="flex gap-2 overflow-x-auto pb-2 scroll-hide flex-grow mr-4 scroll-smooth"></div>
         <button onclick="toggleTheme()" id="theme-icon" class="glass w-10 h-10 flex items-center justify-center rounded-full text-lg shadow-lg hover:bg-slate-700/20 transition">
@@ -96,20 +107,20 @@
         </div>
         
         <div class="flex flex-wrap gap-2 w-full md:w-auto">
-            <button onclick="saveToCloud()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-white font-bold text-xs shadow-lg transition flex items-center gap-2 border border-blue-400">
-                <i class="fas fa-cloud-upload-alt"></i> SIMPAN
-            </button>
-            <button onclick="loadFromCloud()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-white font-bold text-xs shadow-lg transition flex items-center gap-2 border border-purple-400">
-                <i class="fas fa-cloud-download-alt"></i> AMBIL
-            </button>
+            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span class="text-[10px] font-bold text-emerald-500 uppercase">Auto-Save On</span>
+            </div>
 
             <div class="h-8 w-px bg-slate-700/50 mx-1 hidden md:block"></div>
-
+            
+            <button onclick="loadFromCloud()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-white font-bold text-xs shadow-lg transition flex items-center gap-2 border border-purple-400">
+                <i class="fas fa-sync"></i> SYNC
+            </button>
+            
             <button onclick="printWeeklyReport()" title="Cetak PDF" class="bg-orange-600 hover:bg-orange-500 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-file-pdf"></i></button>
             <button onclick="configDatabase()" title="Database Murid" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-users"></i></button>
             <button onclick="showStats()" title="Analisis" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-chart-pie"></i></button>
-            
-            <button onclick="exportData()" title="Backup File" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-save"></i></button>
             <button onclick="masterReset()" title="Reset" class="bg-red-600 hover:bg-red-500 px-3 py-2 rounded-lg text-white shadow-lg transition"><i class="fas fa-trash-alt"></i></button>
         </div>
     </header>
@@ -222,20 +233,47 @@
         let pdp_history = JSON.parse(localStorage.getItem('pdp_history')) || [];
         let holidays = JSON.parse(localStorage.getItem('pdp_holidays')) || [];
 
-        // --- 4. CLOUD SYNC FUNCTIONS ---
-        async function saveToCloud() {
-            Swal.fire({ title: 'Sedang Simpan...', text: 'Data sedang dihantar ke Google Sheets...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            const packet = { db: db_pelajar, history: pdp_history, holidays: holidays, startDate: startDate, theme: localStorage.getItem('pdp_theme') };
-            try {
-                await fetch(API_URL, { method: 'POST', body: JSON.stringify(packet) });
-                Swal.fire({ title: 'Berjaya Disimpan!', text: 'Data anda selamat di Cloud.', icon: 'success', timer: 2000, showConfirmButton: false });
-            } catch (error) {
-                Swal.fire('Ralat', 'Gagal menyambung ke server. Periksa internet.', 'error');
+        // --- 4. CLOUD SYNC FUNCTIONS (SMART AUTO-SAVE) ---
+        
+        // Show Toast Notification (Tak Ganggu Screen)
+        function showToast(status) {
+            const toast = document.getElementById('auto-save-toast');
+            const icon = toast.querySelector('.toast-spinner');
+            const text = toast.querySelector('span');
+
+            if(status === 'saving') {
+                toast.style.background = "#10b981";
+                icon.style.display = "block";
+                text.innerText = "Auto-Save ke Cloud...";
+                toast.classList.add('show');
+            } else if (status === 'success') {
+                toast.style.background = "#059669";
+                icon.style.display = "none";
+                text.innerHTML = '<i class="fas fa-check-circle"></i> Disimpan!';
+                setTimeout(() => { toast.classList.remove('show'); }, 2000);
+            } else {
+                toast.style.background = "#dc2626";
+                icon.style.display = "none";
+                text.innerHTML = '<i class="fas fa-exclamation-circle"></i> Gagal Save Cloud';
+                setTimeout(() => { toast.classList.remove('show'); }, 3000);
             }
         }
 
+        // Auto Save (Background)
+        async function autoSaveCloud() {
+            showToast('saving');
+            const packet = { db: db_pelajar, history: pdp_history, holidays: holidays, startDate: startDate, theme: localStorage.getItem('pdp_theme') };
+            try {
+                await fetch(API_URL, { method: 'POST', body: JSON.stringify(packet) });
+                showToast('success');
+            } catch (error) {
+                showToast('error');
+            }
+        }
+
+        // Load Manual (Sync)
         async function loadFromCloud() {
-            Swal.fire({ title: 'Sedang Muat Turun...', text: 'Mengambil data terkini...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            Swal.fire({ title: 'Sedang Sync...', text: 'Mengambil data terkini...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             try {
                 const response = await fetch(API_URL);
                 const data = await response.json();
@@ -248,12 +286,12 @@
                     localStorage.setItem('pdp_db', JSON.stringify(db_pelajar));
                     localStorage.setItem('pdp_start_date', startDate);
                     if(data.theme) localStorage.setItem('pdp_theme', data.theme);
-                    Swal.fire('Berjaya!', 'Data Cloud telah dikemaskini.', 'success').then(() => location.reload());
+                    Swal.fire('Berjaya Sync!', 'Data terkini telah dimuat turun.', 'success').then(() => location.reload());
                 } else {
-                    Swal.fire('Cloud Kosong', 'Tiada data dijumpai di server.', 'info');
+                    Swal.fire('Cloud Kosong', 'Tiada data di server.', 'info');
                 }
             } catch (error) {
-                Swal.fire('Ralat', 'Gagal mengambil data.', 'error');
+                Swal.fire('Ralat', 'Gagal menyambung ke server.', 'error');
             }
         }
 
@@ -340,11 +378,14 @@
             });
 
             if (isDenied) {
+                // DELETE logic
                 pdp_history = pdp_history.filter(h => !(h.minggu == currentWeek && h.hari == day && h.kelas == className && h.masa == time));
                 saveAllData();
                 Swal.fire('Dipadam', 'Rekod dikosongkan.', 'success');
                 updateProgress();
+                autoSaveCloud(); // TRIGGER AUTO SAVE
             } else if (result) {
+                // SAVE logic
                 pdp_history = pdp_history.filter(h => !(h.minggu == currentWeek && h.hari == day && h.kelas == className && h.masa == time));
                 const newRecord = {
                     minggu: currentWeek, hari: day, masa: time, kelas: className, subjek: subject,
@@ -354,6 +395,10 @@
                 pdp_history.push(newRecord);
                 saveAllData();
                 updateProgress();
+                
+                // TRIGGER AUTO SAVE
+                autoSaveCloud();
+
                 Swal.fire({ title: 'Disimpan!', text: 'Hantar ke WhatsApp?', icon: 'success', showCancelButton: true, confirmButtonText: 'Hantar', cancelButtonText: 'Tutup' }).then((wa) => { if(wa.isConfirmed) shareWhatsApp(newRecord); });
             }
         }
@@ -450,7 +495,8 @@
                 db_pelajar[currentClass] = document.getElementById('sl').value.split('\n').map(n => n.trim()).filter(n => n !== "");
                 localStorage.setItem('pdp_start_date', startDate);
                 localStorage.setItem('pdp_db', JSON.stringify(db_pelajar));
-                Swal.fire('Disimpan', 'Database dikemaskini.', 'success').then(() => location.reload());
+                Swal.fire('Disimpan', 'Database dikemaskini.', 'success');
+                autoSaveCloud(); // TRIGGER AUTO SAVE
             }
         }
 
@@ -465,15 +511,11 @@
                     if (result.value === 'week') pdp_history = pdp_history.filter(h => h.minggu !== currentWeek);
                     else if (result.value === 'all') pdp_history = [];
                     else localStorage.clear();
-                    saveAllData(); location.reload();
+                    saveAllData(); 
+                    autoSaveCloud(); // TRIGGER AUTO SAVE (kosongkan cloud juga)
+                    location.reload();
                 }
             });
-        }
-
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ db: db_pelajar, history: pdp_history, holidays: holidays, startDate: startDate, theme: localStorage.getItem('pdp_theme') }));
-            const a = document.createElement('a'); a.href = dataStr; a.download = "Backup_PDP_" + new Date().toISOString().slice(0,10) + ".json";
-            document.body.appendChild(a); a.click(); a.remove();
         }
 
         function shareWhatsApp(record) {
@@ -500,7 +542,9 @@
         function toggleHoliday() {
             if (holidays.includes(currentWeek)) holidays = holidays.filter(w => w !== currentWeek);
             else holidays.push(currentWeek);
-            localStorage.setItem('pdp_holidays', JSON.stringify(holidays)); location.reload();
+            localStorage.setItem('pdp_holidays', JSON.stringify(holidays)); 
+            autoSaveCloud(); // TRIGGER AUTO SAVE
+            location.reload();
         }
 
         function showStats() {
