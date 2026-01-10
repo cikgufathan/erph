@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal Semakan Kehadiran | E-RPH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f0f9ff; color: #1e293b; }
+        .glass { background: white; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-radius: 16px; }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .status-hadir { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .status-th { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-3xl mx-auto text-center mb-8">
+        <div class="inline-block p-4 rounded-full bg-white shadow-lg mb-4">
+            <i class="fas fa-school text-4xl text-blue-600"></i>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 uppercase tracking-tight">Portal Semakan Kehadiran</h1>
+        <p class="text-slate-500 text-sm mt-2">Semak rekod kehadiran & PdP pelajar secara terus.</p>
+        <div class="mt-4 inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase">
+            <div class="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></div>
+            Data Dikemaskini: <span id="last-update" class="ml-1">...</span>
+        </div>
+    </div>
+
+    <div class="max-w-md mx-auto mb-8 relative z-10">
+        <div class="glass p-2 flex items-center">
+            <div class="pl-3 text-slate-400">
+                <i class="fas fa-search"></i>
+            </div>
+            <select id="class-select" onchange="loadClassData()" class="w-full bg-transparent p-3 outline-none text-slate-700 font-bold appearance-none cursor-pointer">
+                <option value="" disabled selected>PILIH KELAS ANAK ANDA...</option>
+            </select>
+            <div class="pr-3 text-slate-400">
+                <i class="fas fa-chevron-down"></i>
+            </div>
+        </div>
+    </div>
+
+    <div id="content-area" class="max-w-3xl mx-auto space-y-6 pb-20">
+        <div id="welcome-msg" class="text-center py-10 opacity-60">
+            <i class="fas fa-clipboard-list text-6xl text-slate-300 mb-4"></i>
+            <p class="text-slate-500 font-medium">Sila pilih kelas untuk melihat rekod minggu ini.</p>
+        </div>
+
+        <div id="loading-spinner" class="hidden text-center py-10">
+            <div class="inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3"></div>
+            <p class="text-xs font-bold text-blue-500 uppercase">Sedang Memuatkan Data...</p>
+        </div>
+        
+        <div id="results-container" class="hidden">
+            <div class="flex justify-between items-end mb-4 px-2">
+                <h2 class="text-xl font-bold text-slate-800">Laporan Minggu Ini (<span id="week-display" class="text-blue-600">M1</span>)</h2>
+                <span id="date-range" class="text-xs font-bold text-slate-400 bg-white px-2 py-1 rounded border">...</span>
+            </div>
+
+            <div id="cards-wrapper" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <footer class="fixed bottom-0 left-0 w-full bg-white border-t border-slate-100 py-3 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+        Portal Ibu Bapa v1.0 • E-RPH Cloud
+    </footer>
+
+    <script>
+        // --- CONFIG ---
+        // Sila pastikan URL ini SAMA dengan index.html tuan
+        const API_URL = "https://script.google.com/macros/s/AKfycbzGTwbMsZdavO_XasDfcg80-aHUw0gmz3yR7-yP6fLGOSVbfmp9WPr86OSCaTcJlUPYiQ/exec";
+
+        // Variables
+        let globalData = null;
+        let selectedClass = "";
+        let refreshInterval;
+
+        // --- CORE FUNCTIONS ---
+
+        async function init() {
+            fetchData();
+            // Auto refresh setiap 30 saat untuk ibu bapa
+            refreshInterval = setInterval(fetchData, 30000); 
+        }
+
+        async function fetchData() {
+            document.getElementById('last-update').innerText = "Syncing...";
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                
+                if (data && data.status !== 'empty') {
+                    globalData = data;
+                    populateClassDropdown();
+                    if(selectedClass) renderData(); // Refresh current view if open
+                    
+                    const now = new Date();
+                    document.getElementById('last-update').innerText = now.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+                }
+            } catch (error) {
+                console.error("Error fetching data", error);
+                document.getElementById('last-update').innerText = "Offline";
+            }
+        }
+
+        function populateClassDropdown() {
+            const select = document.getElementById('class-select');
+            // Simpan selection semasa supaya tak reset bila auto-refresh
+            const currentVal = select.value;
+            
+            // Clear except first option
+            while (select.options.length > 1) { select.remove(1); }
+
+            if (globalData && globalData.db) {
+                Object.keys(globalData.db).forEach(cls => {
+                    const opt = document.createElement('option');
+                    opt.value = cls;
+                    opt.innerText = cls;
+                    select.appendChild(opt);
+                });
+            }
+            
+            if (currentVal && globalData.db[currentVal]) {
+                select.value = currentVal;
+            }
+        }
+
+        function loadClassData() {
+            selectedClass = document.getElementById('class-select').value;
+            document.getElementById('welcome-msg').classList.add('hidden');
+            document.getElementById('results-container').classList.add('hidden');
+            document.getElementById('loading-spinner').classList.remove('hidden');
+
+            // Simulate slight delay for UX
+            setTimeout(renderData, 500);
+        }
+
+        function renderData() {
+            if (!globalData || !selectedClass) return;
+
+            document.getElementById('loading-spinner').classList.add('hidden');
+            document.getElementById('results-container').classList.remove('hidden');
+
+            const currentWeek = calculateCurrentWeek(); // Logic auto-detect minggu (atau ambil last record)
+            // Sebaiknya kita ambil minggu yang paling latest ada data dalam history
+            const activeWeek = getLatestActiveWeek() || 1;
+
+            document.getElementById('week-display').innerText = `M${activeWeek}`;
+            document.getElementById('date-range').innerText = calculateWeekDate(activeWeek, globalData.startDate);
+
+            // Filter history untuk Kelas ini & Minggu ini
+            const records = (globalData.history || []).filter(h => h.kelas === selectedClass && h.minggu == activeWeek);
+            
+            // Sort ikut hari (Isnin -> Jumaat)
+            const dayOrder = { "Isnin": 1, "Selasa": 2, "Rabu": 3, "Khamis": 4, "Jumaat": 5 };
+            records.sort((a, b) => (dayOrder[a.hari] || 99) - (dayOrder[b.hari] || 99));
+
+            const wrapper = document.getElementById('cards-wrapper');
+            wrapper.innerHTML = "";
+
+            if (records.length === 0) {
+                wrapper.innerHTML = `
+                    <div class="text-center py-8 glass">
+                        <p class="text-slate-500 text-sm">Belum ada rekod untuk minggu ini.</p>
+                    </div>`;
+                return;
+            }
+
+            // Render setiap sesi PdP
+            records.forEach(rec => {
+                const percentage = ((rec.hadir / rec.total) * 100).toFixed(0);
+                const absentList = rec.absent.length > 0 
+                    ? rec.absent.map(n => `<li class="text-xs text-red-600 font-semibold">• ${n}</li>`).join('') 
+                    : '<li class="text-xs text-green-600 font-semibold italic">Semua Hadir</li>';
+
+                const card = `
+                <div class="glass p-5 card-shadow transition hover:scale-[1.01]">
+                    <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
+                        <div>
+                            <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase block mb-1">${rec.hari} • ${rec.masa}</span>
+                            <h3 class="text-lg font-bold text-slate-800 leading-tight">${rec.subjek}</h3>
+                            <p class="text-xs text-slate-500 mt-1 line-clamp-2">${rec.objektif}</p>
+                        </div>
+                        <div class="text-center min-w-[60px]">
+                            <div class="text-xl font-black ${percentage == 100 ? 'text-green-500' : 'text-blue-600'}">${percentage}%</div>
+                            <div class="text-[8px] font-bold text-slate-400 uppercase">Kehadiran</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-slate-50 rounded-lg p-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] font-bold uppercase text-slate-500">Senarai Tidak Hadir:</span>
+                            <span class="text-[10px] font-bold bg-white border px-2 rounded-full text-slate-600">${rec.absent.length} Pelajar</span>
+                        </div>
+                        <ul class="grid grid-cols-2 gap-1">
+                            ${absentList}
+                        </ul>
+                    </div>
+                    ${rec.catatan ? `<div class="mt-3 text-[10px] text-slate-400 italic border-t pt-2"><i class="fas fa-info-circle mr-1"></i> ${rec.catatan}</div>` : ''}
+                </div>
+                `;
+                wrapper.innerHTML += card;
+            });
+        }
+
+        // --- HELPERS ---
+        function getLatestActiveWeek() {
+            // Cari minggu paling besar nombornya dalam history
+            if (!globalData.history || globalData.history.length === 0) return 1;
+            return Math.max(...globalData.history.map(h => parseInt(h.minggu)));
+        }
+
+        function calculateWeekDate(weekNum, startDateStr) {
+            if(!startDateStr) startDateStr = "2026-01-12";
+            let start = new Date(startDateStr);
+            start.setDate(start.getDate() + (weekNum - 1) * 7);
+            let end = new Date(start);
+            end.setDate(end.getDate() + 4);
+            return `${start.toLocaleDateString('ms-MY', {day:'2-digit', month:'short'})} - ${end.toLocaleDateString('ms-MY', {day:'2-digit', month:'short'})}`;
+        }
+
+        function calculateCurrentWeek() {
+            // Dummy fallback logic if needed
+            return 1;
+        }
+
+        // Start
+        window.onload = init;
+
+    </script>
+</body>
+</html>
