@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>E-RPH Real-Time | Ustaz Fathan</title>
+    <title>E-RPH Ustaz Fathan (No Login)</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#10b981">
@@ -20,9 +20,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker Registered'))
-            .catch(err => console.log('Service Worker Failed', err));
+          navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fail', err));
         });
       }
     </script>
@@ -86,7 +84,7 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
             <div class="flex items-center gap-3">
-                <h1 class="text-2xl md:text-3xl font-extrabold tracking-tighter uppercase">E-RPH CLOUD <span id="current-week-label" class="text-emerald-500">M1</span></h1>
+                <h1 class="text-2xl md:text-3xl font-extrabold tracking-tighter uppercase">E-RPH <span class="text-[10px] bg-emerald-600 px-2 py-1 rounded text-white align-middle">VERSI NO-LOGIN</span></h1>
                 <button onclick="toggleHoliday()" id="holiday-btn" class="bg-red-500/10 hover:bg-red-500/30 text-red-500 border border-red-500/30 px-3 py-1 rounded-full text-[10px] font-bold uppercase transition">
                     <i class="fas fa-umbrella-beach mr-1"></i> CUTI
                 </button>
@@ -131,7 +129,7 @@
                         <th class="p-2 w-1/5">11:30 - 12:30</th>
                         <th class="p-2 w-1/5">12:30 - 13:30</th>
                         <th class="p-2 w-1/5">13:30 - 14:30</th>
-                        <th class="p-2 w-1/5">14:50 - 15:50</th>
+                        <th class="p-2 w-1/5 bg-emerald-500/10 text-emerald-500">14:50 - 15:50</th>
                     </tr>
                 </thead>
                 <tbody id="timetable-body" class="text-[11px] font-bold uppercase">
@@ -150,7 +148,7 @@
                         <td class="p-1"><div id="class-Selasa-1" onclick="openPdP('2Setia','BA','Selasa','10:30-11:30','class-Selasa-1')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">10:30 - 11:30</span></div></td>
                         <td colspan="2" class="p-1"><div id="class-Selasa-2" onclick="openPdP('2AM/2BE','PI','Selasa','11:30-13:30','class-Selasa-2')" class="class-pi p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 AM / 2 BE</span><span class="text-[9px] opacity-80">11:30 - 13:30 (4 Masa)</span></div></td>
                         <td class="p-1"><div class="empty-slot"></div></td>
-                        <td class="p-1"><div id="class-Selasa-3" onclick="openPdP('2Setia','BA','Selasa','14:50-15:50','class-Selasa-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">14:50 - 15:50</span></div></td>
+                        <td class="p-1 bg-emerald-500/5"><div id="class-Selasa-3" onclick="openPdP('2Setia','BA','Selasa','14:50-15:50','class-Selasa-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md border-2 border-emerald-500"><span>2 SETIA</span><span class="text-[9px] opacity-80">14:50 - 15:50</span></div></td>
                     </tr>
 
                     <tr class="border-b border-white/5" id="row-Rabu">
@@ -168,7 +166,7 @@
                         <td class="p-1"><div id="class-Khamis-1" onclick="openPdP('2Setia','BA','Khamis','11:30-12:30','class-Khamis-1')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">11:30 - 12:30</span></div></td>
                         <td class="p-1"><div id="class-Khamis-2" onclick="openPdP('3Setia','BA','Khamis','12:40-13:40','class-Khamis-2')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>3 SETIA</span><span class="text-[9px] opacity-80">12:40 - 13:40</span></div></td>
                         <td class="p-1"><div class="empty-slot"></div></td>
-                        <td class="p-1"><div id="class-Khamis-3" onclick="openPdP('1Setia','BA','Khamis','14:50-15:50','class-Khamis-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>1 SETIA</span><span class="text-[9px] opacity-80">14:50 - 15:50</span></div></td>
+                        <td class="p-1 bg-emerald-500/5"><div id="class-Khamis-3" onclick="openPdP('1Setia','BA','Khamis','14:50-15:50','class-Khamis-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md border-2 border-emerald-500"><span>1 SETIA</span><span class="text-[9px] opacity-80">14:50 - 15:50</span></div></td>
                     </tr>
 
                     <tr id="row-Jumaat">
@@ -603,7 +601,6 @@
             startAutoSync(); 
             initTheme(); renderWeeks(); updateProgress(); highlightToday();
             if (holidays.includes(currentWeek)) document.getElementById('main-schedule-area').classList.add('is-holiday');
-            document.getElementById('current-week-label').innerText = `M${currentWeek}`;
             document.getElementById('week-date-range').innerText = calculateWeekDate(currentWeek);
         };
     </script>
