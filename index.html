@@ -31,20 +31,19 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background 0.3s, color 0.3s; -webkit-tap-highlight-color: transparent; }
         
-        /* Tema Gelap (Default) */
+        /* TEMA */
         body.dark-mode { background: #0f172a; color: #f8fafc; }
         .dark-mode .glass { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         .dark-mode .empty-slot { background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); }
         .dark-mode .modal-bg { background: #1e293b; color: #fff; }
         
-        /* Tema Cerah */
         body.light-mode { background: #f8fafc; color: #1e293b; }
         .light-mode .glass { background: white; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
         .light-mode .empty-slot { background: rgba(0,0,0,0.03); border: 1px dashed rgba(0,0,0,0.1); }
         .light-mode .text-slate-400 { color: #64748b; }
         .light-mode .modal-bg { background: #fff; color: #1e293b; }
 
-        /* UI Elements */
+        /* UI */
         .class-ba { background: linear-gradient(135deg, #059669, #10b981); border-left: 4px solid #34d399; color: white !important; cursor: pointer; transition: transform 0.1s; }
         .class-pi { background: linear-gradient(135deg, #2563eb, #3b82f6); border-left: 4px solid #60a5fa; color: white !important; cursor: pointer; transition: transform 0.1s; }
         .class-ba:active, .class-pi:active { transform: scale(0.98); }
@@ -60,7 +59,7 @@
         .today-highlight { background: rgba(16, 185, 129, 0.1); border: 2px solid #10b981; }
         .today-header { color: #10b981 !important; font-weight: 800 !important; }
 
-        /* Toast Notification */
+        /* Toast */
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; }
         .toast { display: flex; items-center; padding: 12px 20px; border-radius: 10px; background: #10b981; color: white; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); transform: translateY(100px); opacity: 0; transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
         .toast.show { transform: translateY(0); opacity: 1; }
@@ -74,35 +73,6 @@
         <div id="auto-save-toast" class="toast">
             <div class="toast-spinner"></div>
             <span class="text-xs font-bold">Menyemak Cloud...</span>
-        </div>
-    </div>
-
-    <div id="login-gate" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4 transition-opacity duration-500">
-        <div class="glass p-8 rounded-2xl shadow-2xl w-full max-w-sm border border-emerald-500/30 text-center relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500"></div>
-            <div class="mb-8">
-                <div class="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
-                    <i class="fas fa-user-shield text-4xl text-emerald-500"></i>
-                </div>
-                <h2 class="text-2xl font-extrabold text-white tracking-tight">E-RPH SECURE</h2>
-                <p class="text-slate-400 text-xs mt-1 font-medium">Sistem Pengurusan & Pelaporan PdP</p>
-            </div>
-            <div class="space-y-3">
-                <div class="relative">
-                    <i class="fas fa-user absolute left-4 top-3.5 text-slate-500 text-sm"></i>
-                    <input type="text" id="username" placeholder="ID Pengguna" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-emerald-500 focus:bg-slate-800 outline-none transition text-sm font-semibold">
-                </div>
-                <div class="relative">
-                    <i class="fas fa-lock absolute left-4 top-3.5 text-slate-500 text-sm"></i>
-                    <input type="password" id="password" placeholder="Kata Laluan" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-emerald-500 focus:bg-slate-800 outline-none transition text-sm font-semibold">
-                </div>
-            </div>
-            <button onclick="checkLogin()" class="w-full mt-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transform transition active:scale-95 flex items-center justify-center gap-2">
-                LOG MASUK <i class="fas fa-arrow-right text-xs"></i>
-            </button>
-            <p id="login-msg" class="text-red-400 text-xs mt-4 hidden font-bold bg-red-500/10 py-2 rounded-lg border border-red-500/20 animate-pulse">
-                <i class="fas fa-exclamation-triangle mr-1"></i> ID atau Kata Laluan Salah!
-            </p>
         </div>
     </div>
 
@@ -138,7 +108,6 @@
             <button onclick="configDatabase()" title="Database Murid" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-users"></i></button>
             <button onclick="showStats()" title="Analisis" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-2 rounded-lg text-white transition"><i class="fas fa-chart-pie"></i></button>
             <button onclick="masterReset()" title="Reset" class="bg-red-600 hover:bg-red-500 px-3 py-2 rounded-lg text-white shadow-lg transition"><i class="fas fa-trash-alt"></i></button>
-            <button onclick="logout()" title="Log Keluar" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-white shadow-lg transition"><i class="fas fa-sign-out-alt"></i></button>
         </div>
     </header>
 
@@ -162,7 +131,7 @@
                         <th class="p-2 w-1/5">11:30 - 12:30</th>
                         <th class="p-2 w-1/5">12:30 - 13:30</th>
                         <th class="p-2 w-1/5">13:30 - 14:30</th>
-                        <th class="p-2 w-1/5">14:30 - 15:30</th>
+                        <th class="p-2 w-1/5">14:50 - 15:50</th>
                     </tr>
                 </thead>
                 <tbody id="timetable-body" class="text-[11px] font-bold uppercase">
@@ -181,7 +150,7 @@
                         <td class="p-1"><div id="class-Selasa-1" onclick="openPdP('2Setia','BA','Selasa','10:30-11:30','class-Selasa-1')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">10:30 - 11:30</span></div></td>
                         <td colspan="2" class="p-1"><div id="class-Selasa-2" onclick="openPdP('2AM/2BE','PI','Selasa','11:30-13:30','class-Selasa-2')" class="class-pi p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 AM / 2 BE</span><span class="text-[9px] opacity-80">11:30 - 13:30 (4 Masa)</span></div></td>
                         <td class="p-1"><div class="empty-slot"></div></td>
-                        <td class="p-1"><div id="class-Selasa-3" onclick="openPdP('2Setia','BA','Selasa','14:30-15:30','class-Selasa-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">14:30 - 15:30</span></div></td>
+                        <td class="p-1"><div id="class-Selasa-3" onclick="openPdP('2Setia','BA','Selasa','14:50-15:50','class-Selasa-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">14:50 - 15:50</span></div></td>
                     </tr>
 
                     <tr class="border-b border-white/5" id="row-Rabu">
@@ -199,7 +168,7 @@
                         <td class="p-1"><div id="class-Khamis-1" onclick="openPdP('2Setia','BA','Khamis','11:30-12:30','class-Khamis-1')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>2 SETIA</span><span class="text-[9px] opacity-80">11:30 - 12:30</span></div></td>
                         <td class="p-1"><div id="class-Khamis-2" onclick="openPdP('3Setia','BA','Khamis','12:40-13:40','class-Khamis-2')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>3 SETIA</span><span class="text-[9px] opacity-80">12:40 - 13:40</span></div></td>
                         <td class="p-1"><div class="empty-slot"></div></td>
-                        <td class="p-1"><div id="class-Khamis-3" onclick="openPdP('1Setia','BA','Khamis','14:30-15:30','class-Khamis-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>1 SETIA</span><span class="text-[9px] opacity-80">14:30 - 15:30</span></div></td>
+                        <td class="p-1"><div id="class-Khamis-3" onclick="openPdP('1Setia','BA','Khamis','14:50-15:50','class-Khamis-3')" class="class-ba p-2 rounded h-20 flex flex-col items-center justify-center shadow-md"><span>1 SETIA</span><span class="text-[9px] opacity-80">14:50 - 15:50</span></div></td>
                     </tr>
 
                     <tr id="row-Jumaat">
@@ -215,41 +184,7 @@
 
     <script>
         // --- CONFIG ---
-        const USER_ID = "ustazfathan";
-        const USER_PASS = "fathan@pip123";
         const API_URL = "https://script.google.com/macros/s/AKfycbzGTwbMsZdavO_XasDfcg80-aHUw0gmz3yR7-yP6fLGOSVbfmp9WPr86OSCaTcJlUPYiQ/exec";
-
-        // --- AUTH ---
-        function checkLogin() {
-            const u = document.getElementById('username').value;
-            const p = document.getElementById('password').value;
-            if (u === USER_ID && p === USER_PASS) {
-                sessionStorage.setItem('isLoggedIn', 'true');
-                document.getElementById('login-gate').style.display = 'none';
-                silentCloudSync('first'); 
-                startAutoSync(); // Mula timer
-            } else {
-                document.getElementById('login-msg').classList.remove('hidden');
-                document.getElementById('password').value = '';
-            }
-        }
-        
-        function logout() {
-            Swal.fire({
-                title: 'Log Keluar?',
-                text: "Anda perlu log masuk semula nanti.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#334155',
-                cancelButtonColor: '#94a3b8',
-                confirmButtonText: 'Ya, Log Keluar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    sessionStorage.removeItem('isLoggedIn');
-                    location.reload();
-                }
-            });
-        }
 
         // --- VARIABLES ---
         let startDate = localStorage.getItem('pdp_start_date') || "2026-01-12";
@@ -258,11 +193,10 @@
         let db_pelajar = JSON.parse(localStorage.getItem('pdp_db')) || defaultDb;
         let pdp_history = JSON.parse(localStorage.getItem('pdp_history')) || [];
         let holidays = JSON.parse(localStorage.getItem('pdp_holidays')) || [];
-        let isEditing = false; // Flag penting supaya tak kacau user menaip
+        let isEditing = false; 
 
         // --- REAL-TIME TIMER ---
         function startAutoSync() {
-            // Check setiap 10 saat (10000ms)
             setInterval(() => {
                 if (!isEditing) {
                     silentCloudSync('auto');
@@ -356,21 +290,19 @@
         }
 
         async function silentCloudSync(mode = 'manual') {
-            if (isEditing) return; // Jangan kacau kalau user tengah menaip
+            if (isEditing) return; 
 
-            // Kalau auto, kita tak nak popup besar-besar
             if (mode === 'manual' || mode === 'first') showToast('loading', 'Sync...');
             
-            // Indikator kecil di header
             document.getElementById('live-indicator').classList.remove('bg-red-500');
-            document.getElementById('live-indicator').classList.add('bg-yellow-400'); // Sedang check...
+            document.getElementById('live-indicator').classList.add('bg-yellow-400'); 
 
             try {
                 const response = await fetch(API_URL);
                 const data = await response.json();
                 
                 document.getElementById('live-indicator').classList.remove('bg-yellow-400');
-                document.getElementById('live-indicator').classList.add('bg-emerald-500'); // OK
+                document.getElementById('live-indicator').classList.add('bg-emerald-500'); 
 
                 if (data && data.status !== 'empty') {
                     if(data.history) pdp_history = data.history;
@@ -386,7 +318,7 @@
                 }
             } catch (error) {
                 document.getElementById('live-indicator').classList.remove('bg-yellow-400');
-                document.getElementById('live-indicator').classList.add('bg-red-500'); // Error
+                document.getElementById('live-indicator').classList.add('bg-red-500'); 
                 if (mode === 'manual') document.getElementById('auto-save-toast').classList.remove('show');
             }
         }
@@ -434,7 +366,7 @@
                 Swal.fire('Database Kosong', 'Sila isi Database dulu.', 'warning'); return; 
             }
 
-            isEditing = true; // LOCK: Jangan refresh masa ni
+            isEditing = true; 
 
             // Cari rekod local
             const existingRecord = pdp_history.find(h => h.minggu == currentWeek && h.hari == day && h.kelas == className && h.masa == time);
@@ -478,7 +410,7 @@
                 confirmButtonColor: '#059669',
                 denyButtonColor: '#dc2626',
                 customClass: { popup: 'modal-bg' },
-                didClose: () => { isEditing = false; }, // UNLOCK: Boleh refresh balik
+                didClose: () => { isEditing = false; }, 
                 preConfirm: () => {
                     const checks = document.querySelectorAll('.absent-check');
                     let absent = [];
@@ -563,7 +495,7 @@
             if (row) { row.classList.add('today-highlight'); row.querySelector('.row-header')?.classList.add('today-header'); }
         }
         async function configDatabase() {
-            isEditing = true; // Pause sync
+            isEditing = true; 
             const { value: formValues } = await Swal.fire({
                 title: 'DATABASE MURID',
                 html: `
@@ -583,7 +515,7 @@
                     updateText(); document.getElementById('sk').onchange = updateText;
                 },
                 showCancelButton: true, confirmButtonText: 'Simpan',
-                didClose: () => { isEditing = false; }, // Resume sync
+                didClose: () => { isEditing = false; }, 
                 preConfirm: () => { return { date: document.getElementById('sd').value, class: document.getElementById('sk').value, names: document.getElementById('sl').value } }
             });
 
@@ -667,12 +599,8 @@
 
         // --- INIT ---
         window.onload = () => {
-            if (sessionStorage.getItem('isLoggedIn') === 'true') {
-                document.getElementById('login-gate').style.display = 'none';
-                silentCloudSync('first'); 
-                startAutoSync(); // Start timer terus
-            }
-            document.getElementById('password').addEventListener("keypress", function(event) { if (event.key === "Enter") checkLogin(); });
+            silentCloudSync('first'); 
+            startAutoSync(); 
             initTheme(); renderWeeks(); updateProgress(); highlightToday();
             if (holidays.includes(currentWeek)) document.getElementById('main-schedule-area').classList.add('is-holiday');
             document.getElementById('current-week-label').innerText = `M${currentWeek}`;
